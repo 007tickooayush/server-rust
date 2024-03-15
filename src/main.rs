@@ -1,7 +1,7 @@
 // https://www.twilio.com/en-us/blog/build-high-performance-rest-apis-rust-axum
 
 use axum::{Router, Server};
-use axum::routing::{get, post};
+use axum::routing::{get};
 
 #[tokio::main]
 async fn main() {
@@ -10,7 +10,6 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(|| async { "Hello Rust" }))
-        .route("/", post(|data| async { "POST Method" }))
         ;
 
     println!("Server running on port: {}", PORT);
