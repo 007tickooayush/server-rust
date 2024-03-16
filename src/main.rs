@@ -3,9 +3,9 @@ use axum::body::Body;
 use axum::http::{Response, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct User {
     id: u64,
     name: String,
@@ -14,10 +14,18 @@ struct User {
 
 // Function to Handle user creation
 // /create-user
-async fn create_user() -> impl IntoResponse {
+// async fn create_user() -> impl IntoResponse {
+//     Response::builder()
+//         .status(StatusCode::CREATED)
+//         .body(Body::from("User created successfully"))
+//         .unwrap()
+// }
+async fn create_user(Json(new_user): Json<User>) -> impl IntoResponse {
+    // Json(new_user)
     Response::builder()
         .status(StatusCode::CREATED)
-        .body(Body::from("User created successfully"))
+        // .body(Body::from("User created successfully"))
+        .body(Json(new_user).into_response())
         .unwrap()
 }
 
@@ -40,7 +48,15 @@ async fn list_users() -> Json<Vec<User>> {
     Json(users)
 }
 
+#[derive(Serialize,Deserialize)]
+struct Item {
+    title: String,
+}
 
+// A handler to demonstrate the JSON body extractor
+async fn add_item(Json(item): Json<Item>) -> String {
+    format!("Added item: {}", item.title)
+}
 
 #[tokio::main]
 async fn main() {
@@ -51,6 +67,7 @@ async fn main() {
         .route("/", get(|| async { "Hello Rust" }))
         .route("/create-user", post(create_user))
         .route("/users",get(list_users))
+        .route("/add",post(add_item))
         ;
 
     println!("Server running on port: {}", PORT);
