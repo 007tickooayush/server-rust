@@ -1,73 +1,55 @@
-use axum::{Json, Router, Server};
+use axum::{Extension, Json, Router, Server};
 use axum::body::Body;
 use axum::http::{Response, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use sqlx::{MySqlPool, query, Row};
 
-#[derive(Serialize, Deserialize, Debug)]
-struct User {
-    id: u64,
-    name: String,
-    email: String
-}
-
-// Function to Handle user creation
-// /create-user
-// async fn create_user() -> impl IntoResponse {
-//     Response::builder()
-//         .status(StatusCode::CREATED)
-//         .body(Body::from("User created successfully"))
-//         .unwrap()
-// }
-async fn create_user(Json(new_user): Json<User>) -> impl IntoResponse {
-    // Json(new_user)
-    Response::builder()
-        .status(StatusCode::CREATED)
-        // .body(Body::from("User created successfully"))
-        .body(Json(new_user).into_response())
-        .unwrap()
-}
-
-// Function to get list of users
-// /users
-async fn list_users() -> Json<Vec<User>> {
-    let users = vec![
-        User {
-            id: 1,
-            name: "Hellsent".to_string(),
-            email: "hellsent@gmail.com".to_string()
-        },
-        User {
-            id: 2,
-            name: "Tracteon".to_string(),
-            email: "tracteon@gmail.com".to_string()
+async fn get_users(Extension(pool):Extension<MySqlPool>) -> impl IntoResponse {
+    let rows = match query("SELECT id, name, phone_number FROM demo")
+        .fetch_all(&pool)
+        .await {
+        Ok(rows) => rows ,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error while fetching data").into_response();
         }
-    ];
+    };
 
-    Json(users)
-}
+    let users: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|row| {
 
-#[derive(Serialize,Deserialize)]
-struct Item {
-    title: String,
-}
+            json!({
+                "id":row.try_get::<i32, _>("id").unwrap_or_default(),
+                "name":row.try_get::<String, _>("name").unwrap_or_default(),
+                "phone_number":row.try_get::<String, _>("phone_number").unwrap_or_default()
+            })
+        }).collect();
 
-// A handler to demonstrate the JSON body extractor
-async fn add_item(Json(item): Json<Item>) -> String {
-    format!("Added item: {}", item.title)
+    (StatusCode::OK, Json(users)).into_response()
 }
 
 #[tokio::main]
 async fn main() {
     const PORT:i32  = 3008;
-    // println!("Hello, world!");
+
+    let db_user = "root";
+    let db_pass = "root";
+    let db_host = "localhost:3307";
+    let db_name = "test";
+    let db_url = format!("mysql://{}:{}@{}/{}", db_user,db_pass,db_host,db_name);
+
+    let db_pool = MySqlPool::connect(&db_url)
+        .await
+        .expect("Unable to connect to the database");
+    println!("Database connected");
 
     let app = Router::new()
         .route("/", get(|| async { "Hello Rust" }))
-        .route("/create-user", post(create_user))
-        .route("/users",get(list_users))
-        .route("/add",post(add_item))
+        .route("/demo",get(get_users))
+        .layer(Extension(db_pool))
         ;
 
     println!("Server running on port: {}", PORT);

@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "name": "Hector Cornell",
+    "phone_number": "9845612223"
+  },
+  {
+    "id": 2,
+    "name": "Nyetor Ivanka",
+    "phone_number": "881276223344"
+  },
+  {
+    "id": 3,
+    "name": "Grushtal Morre",
+    "phone_number": "987456815412"
+  },
+  {
+    "id": 4,
+    "name": "Rexolina Kypt",
+    "phone_number": "45872115412"
+  },
+  {
+    "id": 5,
+    "name": "Urnest Nu",
+    "phone_number": "9845612223"
+  },
+  {
+    "id": 6,
+    "name": "Vileena Drunkik",
+    "phone_number": "9845612223"
+  },
+  {
+    "id": 7,
+    "name": "Frank Castle",
+    "phone_number": "9845612223"
+  }
+]
