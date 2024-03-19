@@ -1,10 +1,10 @@
 use axum::{Extension, Json, Router, Server};
-use axum::body::Body;
-use axum::http::{Response, StatusCode};
+// use axum::body::Body;
+use axum::http::{StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{json};
 use sqlx::{MySqlPool, query, Row};
 
 async fn get_users(Extension(pool):Extension<MySqlPool>) -> impl IntoResponse {
@@ -31,6 +31,42 @@ async fn get_users(Extension(pool):Extension<MySqlPool>) -> impl IntoResponse {
     (StatusCode::OK, Json(users)).into_response()
 }
 
+/// demo request body for "User"
+/// {
+///     "name": "John Wayne",
+///     "phone_number": "98827635482"
+/// }
+#[derive(Deserialize)]
+struct UserReq {
+    name: String,
+    phone_number: String,
+}
+
+#[derive(Serialize)]
+struct UserResp {
+    id: i32,
+    name: String,
+    phone_number: String,
+}
+async fn create_user(Extension(pool):Extension<MySqlPool>, Json(user):Json<UserReq>) -> impl IntoResponse {
+    let result = match query("INSERT INTO demo (name, phone_number) VALUES (?, ?)")
+        .bind(user.name)
+        .bind(user.phone_number)
+        .execute(&pool)
+        .await {
+        Ok(result) => result,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error while inserting data").into_response();
+        }
+    };
+
+    if result.rows_affected() == 1 {
+        (StatusCode::CREATED, "User created successfully").into_response()
+    } else {
+        (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error while inserting data").into_response()
+    }
+}
+
 #[tokio::main]
 async fn main() {
     const PORT:i32  = 3008;
@@ -49,6 +85,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async { "Hello Rust" }))
         .route("/demo",get(get_users))
+        .route("/create",post(create_user))
         .layer(Extension(db_pool))
         ;
 
