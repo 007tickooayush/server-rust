@@ -1,4 +1,5 @@
 use axum::{Extension, Json, Router, Server};
+use axum::extract::Query;
 // use axum::body::Body;
 use axum::http::{StatusCode};
 use axum::response::IntoResponse;
@@ -67,6 +68,30 @@ async fn create_user(Extension(pool):Extension<MySqlPool>, Json(user):Json<UserR
     }
 }
 
+#[derive(Deserialize)]
+struct UserUpdateReq {
+    id: i32
+}
+async fn update_user(Extension(pool): Extension<MySqlPool>, Query(find): Query<UserUpdateReq>, Json(user): Json<UserReq>) -> impl IntoResponse {
+    let result = match query("UPDATE demo SET name = ?, phone_number = ? WHERE id = ?")
+        .bind(user.name)
+        .bind(user.phone_number)
+        .bind(find.id)
+        .execute(&pool)
+        .await {
+        Ok(result) => result,
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
+        }
+    };
+
+    if result.rows_affected() >=1 {
+        (StatusCode::CREATED, "User updated").into_response()
+    } else {
+        (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error while updating data").into_response()
+    }
+}
+
 #[tokio::main]
 async fn main() {
     const PORT:i32  = 3008;
@@ -84,8 +109,9 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(|| async { "Hello Rust" }))
-        .route("/demo",get(get_users))
+        .route("/get",get(get_users))
         .route("/create",post(create_user))
+        .route("/update",post(update_user))
         .layer(Extension(db_pool))
         ;
 
